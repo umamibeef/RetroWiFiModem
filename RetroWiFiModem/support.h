@@ -317,7 +317,7 @@ void endCall() {
    tcpClient.stop();
    sendResult(R_NO_CARRIER);
    connectTime = 0;
-   digitalWrite(DCD, !ACTIVE);
+   digitalWrite(CD, !ACTIVE);
 }
 
 //
@@ -396,7 +396,7 @@ void checkForIncomingCall() {
             sendResult(R_CONNECT);
          }
          connectTime = millis();
-         digitalWrite(DCD, ACTIVE);
+         digitalWrite(CD, ACTIVE);
       }
    } else if( ringing ) {
       digitalWrite(RI, !ACTIVE);
@@ -413,13 +413,12 @@ void setupOTAupdates() {
 
    ArduinoOTA.onStart([]() {
       Serial.println(F("OTA upload start"));
-      digitalWrite(DSR, !ACTIVE);
+      digitalWrite(MR, !ACTIVE);
    });
 
    ArduinoOTA.onEnd([]() {
       Serial.println(F("OTA upload end - programming"));
       Serial.flush();                  // allow serial output to finish
-      digitalWrite(TXEN, HIGH);        // before disabling the TX output
    });
 
    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
@@ -506,23 +505,23 @@ SerialConfig getSerialConfig(void) {
 }
 
 // As the ESP8266 is being used as a modem (DCE) in this application,
-// I've reversed the naming of RTS/CTS to match what they'd be on
+// I've reversed the naming of RS/CS to match what they'd be on
 // a modem. The usual naming is correct if the ESP8266 is wired up as
 // a DTE, but kept confusing me here as it's wired up as a DCE.
 void setHardwareFlow(void) {
-   // Enable flow control of DTE -> ESP8266 data with CTS
-   // CTS on the EPS8266 is pin GPIO15 which is physical pin 16
-   // CTS is an output and should be connected to CTS on the RS232
+   // Enable flow control of DTE -> ESP8266 data with CS
+   // CS on the EPS8266 is pin GPIO15 which is physical pin 16
+   // CS is an output and should be connected to CS on the RS232
    // The ESP8266 has a 128 byte receive buffer,
    // so a threshold of 64 is half full
-   pinMode(CTS, FUNCTION_4); // make pin U0CTS
+   pinMode(CS, FUNCTION_4); // make pin U0CS
    SET_PERI_REG_BITS(UART_CONF1(0), UART_RX_FLOW_THRHD, 64, UART_RX_FLOW_THRHD_S);
    SET_PERI_REG_MASK(UART_CONF1(0), UART_RX_FLOW_EN);
 
-   // Enable flow control of ESP8266 -> DTE data with RTS
-   // RTS on the EPS8266 is pin GPIO13 which is physical pin 7
-   // RTS is an input and should be connected to RTS on the RS232
-   pinMode(RTS, FUNCTION_4); // make pin U0RTS
+   // Enable flow control of ESP8266 -> DTE data with RS
+   // RS on the EPS8266 is pin GPIO13 which is physical pin 7
+   // RS is an input and should be connected to RS on the RS232
+   pinMode(RS, FUNCTION_4); // make pin U0RS
    SET_PERI_REG_MASK(UART_CONF0(0), UART_TX_FLOW_EN);
 }
 

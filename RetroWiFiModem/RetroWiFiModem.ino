@@ -35,86 +35,117 @@
 #include "at_proprietary.h"
 
 // =============================================================
-void setup(void) {
-   bool ok = true;
+void setup(void)
+{
+    bool ok = true;
 
-   pinMode(RI, OUTPUT);
-   pinMode(DCD, OUTPUT);
-   pinMode(DSR, OUTPUT);
-   digitalWrite(TXEN, HIGH);     // continue disabling TX until
-   pinMode(TXEN, OUTPUT);        // we have set up the Serial port
+    pinMode(RS, OUTPUT);
+    pinMode(CS, OUTPUT);
+    pinMode(CD, OUTPUT);
+    pinMode(RI, OUTPUT);
+    pinMode(TR, OUTPUT);
+    pinMode(MR, OUTPUT);
+    pinMode(HS_DISP_CTRL, OUTPUT);
+    // pinMode(TX2, OUTPUT);
+    // pinMode(RX2, OUTPUT);
 
-   digitalWrite(RI, !ACTIVE);    // not ringing
-   digitalWrite(DCD, !ACTIVE);   // not connected
-   digitalWrite(DSR, !ACTIVE);   // modem is not ready
+    digitalWrite(RS, !ACTIVE);  // not requesting to send
+    digitalWrite(CS, !ACTIVE);  // not clear to send
+    digitalWrite(CD, !ACTIVE);  // carrier not detected
+    digitalWrite(RI, !ACTIVE);  // not ringing  
+    digitalWrite(TR, !ACTIVE);  // terminal is not ready
+    digitalWrite(MR, !ACTIVE);  // modem is not ready
+    digitalWrite(HS_DISP_CTRL, !ACTIVE); // Disable RS/CS display
+    // digitalWrite(TX2, !ACTIVE); // Disable TX2
+    // digitalWrite(RX2, !ACTIVE); // Disable RX2
 
-   EEPROM.begin(sizeof(struct Settings));
-   EEPROM.get(0, settings);
-   if( settings.magicNumber != MAGIC_NUMBER ) {
-      // no valid data in EEPROM/NVRAM, populate with defaults
-      factoryDefaults(NULL);
-   }
-   sessionTelnetType = settings.telnet;
+    EEPROM.begin(sizeof(struct Settings));
+    EEPROM.get(0, settings);
+    if( settings.magicNumber != MAGIC_NUMBER )
+    {
+        // no valid data in EEPROM/NVRAM, populate with defaults
+        factoryDefaults(NULL);
+    }
+    sessionTelnetType = settings.telnet;
 
-   Serial.begin(settings.serialSpeed, getSerialConfig());
-   digitalWrite(TXEN, LOW);      // enable the TX output
-   if( settings.rtsCts ) {
-      setHardwareFlow();
-   }
-   if( settings.startupWait ) {
-      while( true ) {            // wait for a CR
-         yield();
-         if( Serial.available() ) {
-            if( Serial.read() == CR ) {
-               break;
+    Serial.begin(settings.serialSpeed, getSerialConfig());
+    Serial.swap();
+    delay(2000);
+
+    if( settings.rtsCts )
+    {
+        setHardwareFlow();
+    }
+    if( settings.startupWait )
+    {
+        while( true )
+        { // wait for a CR
+            yield();
+            if( Serial.available() )
+            {
+                if( Serial.read() == CR )
+                {
+                    break;
+                }
             }
-         }
-      }
-   }
+            
+        }
+    }
 
-   WiFi.begin();
-   if( settings.ssid[0] ) {
-      WiFi.waitForConnectResult();
-      WiFi.mode(WIFI_STA);
-   }
-   WiFiClient::setDefaultNoDelay(true);  // disable Nalge algorithm by default
+    WiFi.begin();
+    if( settings.ssid[0] )
+    {
+        WiFi.waitForConnectResult();
+        WiFi.mode(WIFI_STA);
+    }
+    WiFiClient::setDefaultNoDelay(true);  // disable Nalge algorithm by default
 
-   if( settings.listenPort ) {
-      tcpServer.begin(settings.listenPort);
-   }
+    if( settings.listenPort )
+    {
+        tcpServer.begin(settings.listenPort);
+    }
 
-   if( settings.ssid[0] && WiFi.status() == WL_CONNECTED ) {
-      setupOTAupdates();
-   }
+    if( settings.ssid[0] && WiFi.status() == WL_CONNECTED )
+    {
+        setupOTAupdates();
+    }
 
-   if( WiFi.status() == WL_CONNECTED || !settings.ssid[0] ) {
-      if( WiFi.status() == WL_CONNECTED ) {
-         digitalWrite(DSR, ACTIVE);  // modem is finally ready or SSID not configured
-      }
-      if( settings.autoExecute[0] ) {
-         strncpy(atCmd, settings.autoExecute, MAX_CMD_LEN);
-         atCmd[MAX_CMD_LEN] = NUL;
-         if( settings.echo ) {
-            Serial.println(atCmd);
-         }
-         doAtCmds(atCmd);                  // auto execute command
-      } else {
-         sendResult(R_OK);
-      }
-   } else {
-      sendResult(R_ERROR);           // SSID configured, but not connected
-   }
+    if( WiFi.status() == WL_CONNECTED || !settings.ssid[0] )
+    {
+        if( WiFi.status() == WL_CONNECTED )
+        {
+            digitalWrite(MR, ACTIVE);  // modem is finally ready or SSID not configured
+        }
+        if( settings.autoExecute[0] )
+        {
+            strncpy(atCmd, settings.autoExecute, MAX_CMD_LEN);
+            atCmd[MAX_CMD_LEN] = NUL;
+            if( settings.echo )
+            {
+                Serial.println(atCmd);
+            }
+            doAtCmds(atCmd); // auto execute command
+        }
+        else
+        {
+            sendResult(R_OK);
+        }
+    } else {
+        sendResult(R_ERROR); // SSID configured, but not connected
+    }
 }
 
 // =============================================================
-void loop(void) {
+void loop(void)
+{
 
    checkForIncomingCall();
 
-   switch( state ) {
-
+   switch( state )
+   {
       case CMD_NOT_IN_CALL:
-         if( WiFi.status() == WL_CONNECTED ) {
+         if( WiFi.status() == WL_CONNECTED )
+         {
             ArduinoOTA.handle();
          }
          inAtCommandMode();
@@ -122,7 +153,8 @@ void loop(void) {
 
       case CMD_IN_CALL:
          inAtCommandMode();
-         if( state == CMD_IN_CALL && !tcpClient.connected() ) {
+         if( state == CMD_IN_CALL && !tcpClient.connected() )
+         {
             endCall();                    // hang up if not in a call
          }
          break;
@@ -132,7 +164,8 @@ void loop(void) {
          break;
 
       case ONLINE:
-         if( Serial.available() ) {       // data from RS-232 to Wifi
+         if( Serial.available() )
+         {       // data from RS-232 to Wifi
             sendSerialData();
          }
 

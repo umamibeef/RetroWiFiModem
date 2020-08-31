@@ -27,7 +27,7 @@ char *factoryDefaults(char *atCmd) {
    settings.autoExecute[0] = NUL;
    strcpy(settings.terminal, "ansi");
    strcpy(settings.location, "Computer Room");
-   settings.startupWait = false;
+   settings.startupWait = true;
    settings.extendedCodes = true;
    settings.verbose = true;
    settings.quiet = false;
